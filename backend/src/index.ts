@@ -16,7 +16,7 @@ app.use(express.json());
 
 // Routes
 app.use("/api/auth", authRoutes);
-app.use("/movies", moviesRouter);
+app.use("/api/movies", moviesRouter);
 
 app.get("/", (_req, res) => res.send("✅ Backend running"));
 

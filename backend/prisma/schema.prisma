@@ -15,11 +15,12 @@ model User {
 }
 
 model Movie {
-  id         Int         @id @default(autoincrement())
-  title      String
-  posterUrl  String?
-  createdAt  DateTime    @default(now())
-  watchlists Watchlist[]
+  id          Int         @id @default(autoincrement())
+  title       String      @unique // 👈 Added unique
+  description String?
+  poster      String?
+  createdAt   DateTime    @default(now())
+  Watchlist   Watchlist[]
 }
 
 model Watchlist {
