@@ -3,9 +3,15 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
+interface Movie {
+  id: number;
+  title: string;
+  genre?: string;
+}
+
 export default function MoviesPage() {
   const router = useRouter();
-  const [movies, setMovies] = useState<any[]>([]);
+  const [movies, setMovies] = useState<Movie[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -31,10 +37,14 @@ export default function MoviesPage() {
           throw new Error("Failed to fetch movies");
         }
 
-        const data = await res.json();
+        const data: Movie[] = await res.json();
         setMovies(data);
-      } catch (err: any) {
-        setError(err.message);
+      } catch (err: unknown) {
+        if (err instanceof Error) {
+          setError(err.message);
+        } else {
+          setError("An unknown error occurred");
+        }
       } finally {
         setLoading(false);
       }
@@ -51,10 +61,7 @@ export default function MoviesPage() {
       <h1 className="text-2xl font-bold mb-6">Movies</h1>
       <ul className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {movies.map((movie) => (
-          <li
-            key={movie.id}
-            className="border rounded p-3 shadow hover:shadow-lg"
-          >
+          <li key={movie.id} className="border rounded p-3 shadow hover:shadow-lg">
             <h2 className="font-semibold">{movie.title}</h2>
             <p className="text-sm text-gray-600">{movie.genre}</p>
           </li>

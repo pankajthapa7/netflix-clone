@@ -24,23 +24,24 @@ export default function HomePage() {
           return;
         }
 
-        const res = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/api/movies`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/movies`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
 
         if (!res.ok) {
           throw new Error(`Failed to load movies, status: ${res.status}`);
         }
 
-        const data = await res.json();
+        const data: Movie[] = await res.json();
         setMovies(data);
-      } catch (err: any) {
-        setError(err.message || "Failed to load movies. Please try again.");
+      } catch (err: unknown) {
+        if (err instanceof Error) {
+          setError(err.message);
+        } else {
+          setError("Failed to load movies. Please try again.");
+        }
       } finally {
         setLoading(false);
       }
@@ -55,10 +56,11 @@ export default function HomePage() {
   return (
     <div>
       <h1>🎬 Trending Movies</h1>
-      <div style={{ display: "grid", gap: "1rem", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))" }}>
+      <div
+        style={{ display: "grid", gap: "1rem", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))" }}
+      >
         {movies.map((movie) => (
           <MovieCard key={movie.id} movie={movie} />
- 
         ))}
       </div>
     </div>
