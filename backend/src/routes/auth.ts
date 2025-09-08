@@ -1,15 +1,22 @@
-// src/routes/auth.ts
-import { Router } from "express";
-import bcrypt from "bcrypt";
+// backend/src/routes/auth.ts
+import { Router, Request, Response } from "express";
+import { PrismaClient } from "@prisma/client";
+import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import prisma from "../prisma"; // ✅ Correct import
 
+const prisma = new PrismaClient();
 const router = Router();
 
-// Register
-router.post("/register", async (req, res) => {
+const JWT_SECRET = process.env.JWT_SECRET || "your_secret_key";
+
+// ✅ Register
+router.post("/register", async (req: Request, res: Response) => {
   try {
-    const { email, password } = req.body;
+    const { name, email, password } = req.body;
+
+    if (!name || !email || !password) {
+      return res.status(400).json({ error: "Name, email, and password are required" });
+    }
 
     const existingUser = await prisma.user.findUnique({ where: { email } });
     if (existingUser) {
@@ -17,39 +24,36 @@ router.post("/register", async (req, res) => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
+
     const user = await prisma.user.create({
-      data: { email, password: hashedPassword },
+      data: { name, email, password: hashedPassword },
     });
 
-    return res.json({ message: "User registered", user });
-  } catch (err) {
-    console.error("Register error:", err);
+    return res.status(201).json({ message: "User registered successfully", user });
+  } catch (error) {
+    console.error("❌ Error registering user:", error);
     return res.status(500).json({ error: "Internal server error" });
   }
 });
 
-// Login
-router.post("/login", async (req, res) => {
+// ✅ Login
+router.post("/login", async (req: Request, res: Response) => {
   try {
     const { email, password } = req.body;
 
     const user = await prisma.user.findUnique({ where: { email } });
-    if (!user) {
-      return res.status(401).json({ error: "Invalid credentials" });
-    }
+    if (!user) return res.status(400).json({ error: "Invalid credentials" });
 
-    const isValid = await bcrypt.compare(password, user.password);
-    if (!isValid) {
-      return res.status(401).json({ error: "Invalid credentials" });
-    }
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) return res.status(400).json({ error: "Invalid credentials" });
 
-    const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET || "secret", {
-      expiresIn: "1d",
+    const token = jwt.sign({ userId: user.id, email: user.email }, JWT_SECRET, {
+      expiresIn: "1h",
     });
 
-    return res.json({ token });
-  } catch (err) {
-    console.error("Login error:", err);
+    res.json({ message: "Login successful", token });
+  } catch (error) {
+    console.error("❌ Error logging in:", error);
     return res.status(500).json({ error: "Internal server error" });
   }
 });

@@ -1,41 +1,35 @@
-import { Router } from "express";
-import fetch from "node-fetch";
+// backend/src/routes/movies.ts
+import { Router, Request, Response } from "express";
+import { PrismaClient } from "@prisma/client";
+import jwt from "jsonwebtoken";
 
+const prisma = new PrismaClient();
 const router = Router();
 
-router.get("/", async (_req, res) => {
+const JWT_SECRET = process.env.JWT_SECRET || "your_secret_key";
+
+// ✅ Middleware to verify token
+function authenticateToken(req: Request, res: Response, next: Function) {
+  const authHeader = req.headers["authorization"];
+  const token = authHeader && authHeader.split(" ")[1]; // Bearer <token>
+
+  if (!token) return res.status(401).json({ error: "Access denied. No token provided." });
+
+  jwt.verify(token, JWT_SECRET, (err, user) => {
+    if (err) return res.status(403).json({ error: "Invalid or expired token" });
+    (req as any).user = user; // attach decoded user info to request
+    next();
+  });
+}
+
+// ✅ Protected GET /api/movies
+router.get("/", authenticateToken, async (req: Request, res: Response) => {
   try {
-    const tmdbKey = process.env.TMDB_API_KEY;
-    if (!tmdbKey) {
-      return res.status(500).json({ error: "TMDB_API_KEY not configured" });
-    }
-
-    const url = `https://api.themoviedb.org/3/trending/movie/day?api_key=${tmdbKey}`;
-    const response = await fetch(url);
-
-    if (!response.ok) {
-      const text = await response.text();
-      return res.status(502).json({ error: "TMDB fetch failed", details: text });
-    }
-
-    const data: any = await response.json();
-    const results = Array.isArray(data?.results) ? data.results : [];
-
-    // Map into clean shape with full poster URL
-    const movies = results.map((m: any) => ({
-      id: m.id,
-      title: m.title ?? m.name,
-      posterUrl: m.poster_path
-        ? `https://image.tmdb.org/t/p/w500${m.poster_path}`
-        : null,
-      overview: m.overview ?? null,
-      release_date: m.release_date ?? null,
-    }));
-
+    const movies = await prisma.movie.findMany();
     res.json(movies);
-  } catch (err) {
-    console.error("Error in /movies:", err);
-    res.status(500).json({ error: "Internal server error" });
+  } catch (error) {
+    console.error("❌ Failed to fetch movies:", error);
+    res.status(500).json({ error: "Failed to fetch movies" });
   }
 });
 
