@@ -20,10 +20,13 @@ export default function RegisterPage() {
         body: JSON.stringify({ email, password, name }),
       });
 
+      const data = await res.json();
+
       if (!res.ok) {
-        throw new Error("Failed to register");
+        throw new Error(data.error || "Failed to register");
       }
 
+      // ✅ after register, send user to login
       router.push("/login");
     } catch (err: unknown) {
       if (err instanceof Error) {

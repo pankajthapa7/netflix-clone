@@ -1,34 +1,32 @@
-// backend/src/routes/movies.ts
-import { Router, Request, Response } from "express";
-import { PrismaClient } from "@prisma/client";
-import jwt from "jsonwebtoken";
+import { Router } from "express";
 
-const prisma = new PrismaClient();
 const router = Router();
+const TMDB_API_KEY = process.env.TMDB_API_KEY;
 
-const JWT_SECRET = process.env.JWT_SECRET || "your_secret_key";
-
-// ✅ Middleware to verify token
-function authenticateToken(req: Request, res: Response, next: Function) {
-  const authHeader = req.headers["authorization"];
-  const token = authHeader && authHeader.split(" ")[1]; // Bearer <token>
-
-  if (!token) return res.status(401).json({ error: "Access denied. No token provided." });
-
-  jwt.verify(token, JWT_SECRET, (err, user) => {
-    if (err) return res.status(403).json({ error: "Invalid or expired token" });
-    (req as any).user = user; // attach decoded user info to request
-    next();
-  });
-}
-
-// ✅ Protected GET /api/movies
-router.get("/", authenticateToken, async (req: Request, res: Response) => {
+router.get("/", async (_req, res) => {
   try {
-    const movies = await prisma.movie.findMany();
+    const response = await fetch(
+      `https://api.themoviedb.org/3/movie/popular?api_key=${TMDB_API_KEY}&language=en-US&page=1`
+    );
+
+    if (!response.ok) {
+      throw new Error("Failed to fetch from TMDB");
+    }
+
+    // 👇 explicitly type the response
+    const data: { results: any[] } = await response.json();
+
+    // ✅ safely map results
+    const movies = data.results.map((movie) => ({
+      id: movie.id,
+      title: movie.title,
+      overview: movie.overview,
+      poster: `https://image.tmdb.org/t/p/w500${movie.poster_path}`,
+    }));
+
     res.json(movies);
   } catch (error) {
-    console.error("❌ Failed to fetch movies:", error);
+    console.error("❌ Error fetching movies:", error);
     res.status(500).json({ error: "Failed to fetch movies" });
   }
 });
