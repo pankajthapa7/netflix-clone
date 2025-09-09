@@ -1,85 +1,98 @@
 "use client";
 
-import { useState } from "react";
-import Link from "next/link";
+import React, { useState, ChangeEvent, FormEvent } from "react";
+import { useRouter } from "next/navigation";
+import { registerUser } from "@/lib/api"; // adjust path if needed
 
 export default function RegisterPage() {
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+  const router = useRouter();
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    password: "",
+  });
+  const [error, setError] = useState<string | null>(null);
 
-  const handleRegister = async (e: React.FormEvent) => {
+  // ✅ Typed input change handler
+  const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  // ✅ Typed form submit handler
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setError("");
-    setSuccess("");
+    setError(null);
 
     try {
-      const res = await fetch("https://your-app.up.railway.app/auth/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, password }),
-      });
+      await registerUser(formData.name, formData.email, formData.password);
 
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Failed to register");
+      // redirect to login after successful registration
+      router.push("/login");
+    } catch (err) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError("Registration failed");
       }
-
-      setSuccess("Registration successful! Please login.");
-    } catch (err: any) {
-      setError(err.message);
     }
   };
 
   return (
-    <div className="h-screen w-full bg-[url('https://assets.nflxext.com/ffe/siteui/vlv3/4cfc7af2-b958-4cf7-b8c1-d454ebd9e4e4/5a5e6d5e-2f38-4264-9af3-52f3c3d7d5b6/IN-en-20230904-popsignuptwoweeks-perspective_alpha_website_large.jpg')] bg-cover bg-center">
-      <div className="h-screen w-full bg-black bg-opacity-60 flex items-center justify-center">
-        <div className="bg-black bg-opacity-80 p-12 rounded-md w-full max-w-md">
-          <h1 className="text-red-600 text-4xl font-bold mb-6">Netflix</h1>
-          <h2 className="text-white text-2xl font-semibold mb-6">Sign Up</h2>
+    <div className="flex items-center justify-center h-screen bg-black text-white">
+      <div className="bg-neutral-900 p-8 rounded-lg shadow-md w-full max-w-md">
+        <h1 className="text-3xl font-bold mb-6 text-center">Sign Up</h1>
 
-          <form className="flex flex-col gap-4" onSubmit={handleRegister}>
-            <input
-              type="text"
-              placeholder="Full Name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="p-3 rounded-md bg-gray-800 text-white outline-none"
-              required
-            />
-            <input
-              type="email"
-              placeholder="Email or phone number"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="p-3 rounded-md bg-gray-800 text-white outline-none"
-              required
-            />
-            <input
-              type="password"
-              placeholder="Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="p-3 rounded-md bg-gray-800 text-white outline-none"
-              required
-            />
-            <button className="bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-md mt-2">
-              Sign Up
-            </button>
-          </form>
-
-          {error && <p className="text-red-500 mt-4">{error}</p>}
-          {success && <p className="text-green-500 mt-4">{success}</p>}
-
-          <p className="text-gray-400 mt-6">
-            Already have an account?{" "}
-            <Link href="/login" className="text-white hover:underline">
-              Sign in now
-            </Link>
+        {error && (
+          <p className="bg-red-600 text-white text-sm p-2 rounded mb-4">
+            {error}
           </p>
-        </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <input
+            type="text"
+            name="name"
+            placeholder="Full Name"
+            value={formData.name}
+            onChange={handleChange}
+            className="w-full p-3 rounded bg-neutral-800 border border-neutral-700 focus:outline-none focus:ring-2 focus:ring-red-600"
+            required
+          />
+
+          <input
+            type="email"
+            name="email"
+            placeholder="Email"
+            value={formData.email}
+            onChange={handleChange}
+            className="w-full p-3 rounded bg-neutral-800 border border-neutral-700 focus:outline-none focus:ring-2 focus:ring-red-600"
+            required
+          />
+
+          <input
+            type="password"
+            name="password"
+            placeholder="Password"
+            value={formData.password}
+            onChange={handleChange}
+            className="w-full p-3 rounded bg-neutral-800 border border-neutral-700 focus:outline-none focus:ring-2 focus:ring-red-600"
+            required
+          />
+
+          <button
+            type="submit"
+            className="w-full bg-red-600 hover:bg-red-700 transition p-3 rounded text-white font-semibold"
+          >
+            Sign Up
+          </button>
+        </form>
+
+        <p className="mt-6 text-center text-sm text-neutral-400">
+          Already have an account?{" "}
+          <a href="/login" className="text-white hover:underline">
+            Sign in
+          </a>
+        </p>
       </div>
     </div>
   );
